@@ -1,27 +1,34 @@
 import Task from "../model/Task.js";
 
-const createTask = async (title, description) => {
+export const createTask = async (title, description, userId) => {
   const task = await Task.create({
     title,
     description,
+    userId,
   });
 
   return task;
 };
 
-const getTasks = async () => {
-  const tasks = await Task.find({}).lean();
+export const getTasks = async (userId) => {
+  const tasks = await Task.find({ userId }).sort({
+    createdAt: -1,
+  }).lean();
+
   return tasks;
 };
 
-const deleleTask = async (id) => {
-  const task = await Task.findByIdAndDelete(id);
-  return task;
-};
-
-const editTask = async (id, title, description) => {
-  const updatedTask = await Task.findByIdAndUpdate(
-    id,
+export const updateTask = async (
+  id,
+  title,
+  description,
+  userId
+) => {
+  const task = await Task.findOneAndUpdate(
+    {
+      _id: id,
+      userId,
+    },
     {
       title,
       description,
@@ -29,10 +36,17 @@ const editTask = async (id, title, description) => {
     {
       new: true,
       runValidators: true,
-    },
+    }
   );
 
-  return updatedTask;
+  return task;
 };
 
-export { createTask, getTasks, deleleTask ,editTask};
+export const deleteTask = async (id, userId) => {
+  const task = await Task.findOneAndDelete({
+    _id: id,
+    userId,
+  });
+
+  return task;
+};

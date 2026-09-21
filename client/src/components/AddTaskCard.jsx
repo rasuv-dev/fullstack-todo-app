@@ -1,119 +1,141 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
-const styles = {
-  card: "w-full max-w-md border border-gray-200 shadow-xl rounded-xl p-8 bg-white",
-  title: "text-xl font-bold text-center mb-6 text-gray-800",
-  form: "flex flex-col gap-4",
-  fieldGroup: "flex flex-col gap-1.5",
-  label: "text-sm font-medium text-gray-700",
-  input:
-    "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-400",
-  button:
-    "mt-2 w-full py-2.5 px-4 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-medium rounded-md shadow-sm transition-colors duration-150",
-};
+import API_URL, { getAuthHeaders } from "../api.js";
 
+const AddTaskCard = ({
+  editMode = false,
+  initialData = {},
+}) => {
+  const navigate = useNavigate();
 
-
-const AddTaskCard = ({ editMode = false, initialData = {} }) => {
-  const [taskData, setTaskData] = useState({
+  const [task, setTask] = useState({
     title: initialData.title || "",
     description: initialData.description || "",
   });
 
   const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
+  const handleChange = (event) => {
+    const { name, value } = event.target;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    setTask((previousTask) => ({
+      ...previousTask,
+      [name]: value,
+    }));
+  };
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setLoading(true);
 
-    const uri = editMode
-      ? `${SERVER_URL}/update-task`
-      : `${SERVER_URL}/add-task`;
+    const url = editMode
+      ? `${API_URL}/update-task`
+      : `${API_URL}/add-task`;
 
-    const body = editMode ? { ...taskData, id: initialData._id } : taskData;
+    const requestBody = editMode
+      ? {
+          id: initialData._id,
+          title: task.title,
+          description: task.description,
+        }
+      : {
+          title: task.title,
+          description: task.description,
+        };
 
     try {
-      const response = await fetch(uri, {
+      const response = await fetch(url, {
         method: "POST",
-        body: JSON.stringify(body),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getAuthHeaders(),
+        body: JSON.stringify(requestBody),
       });
 
       const result = await response.json();
 
-      if (!response.ok) {
-        alert(result.message || "Something went wrong");
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("email");
+        navigate("/login");
         return;
       }
 
-      alert(editMode ? "Task updated!" : "Task added!");
+      if (!response.ok) {
+        alert(result.message);
+        return;
+      }
 
-      // Return to the todo list
+      alert(
+        editMode
+          ? "Task updated successfully"
+          : "Task added successfully"
+      );
+
       navigate("/");
     } catch (error) {
-      alert("Something went wrong: " + error.message);
+      alert("Something went wrong");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className={styles.card}>
-      <h1 className={styles.title}>
-        {editMode ? "Edit Todo" : "Add New Todo"}
+    <div className="bg-white border rounded shadow p-6 max-w-md mx-auto">
+      <h1 className="text-2xl font-bold mb-6">
+        {editMode ? "Edit Task" : "Add New Task"}
       </h1>
 
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <div className={styles.fieldGroup}>
-          <label htmlFor="title" className={styles.label}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label
+            htmlFor="title"
+            className="block font-bold mb-2"
+          >
             Title
           </label>
 
           <input
             id="title"
             type="text"
-            placeholder="Enter the todo title"
-            className={styles.input}
-            value={taskData.title}
-            onChange={(e) => {
-              setTaskData({
-                ...taskData,
-                title: e.target.value,
-              });
-            }}
+            name="title"
+            placeholder="Enter task title"
+            value={task.title}
+            onChange={handleChange}
             required
+            className="border rounded p-2 w-full"
           />
         </div>
 
-        <div className={styles.fieldGroup}>
-          <label htmlFor="description" className={styles.label}>
+        <div>
+          <label
+            htmlFor="description"
+            className="block font-bold mb-2"
+          >
             Description
           </label>
 
           <textarea
             id="description"
-            rows={4}
-            placeholder="Enter the todo description"
-            className={styles.input}
-            value={taskData.description}
-            onChange={(e) => {
-              setTaskData({
-                ...taskData,
-                description: e.target.value,
-              });
-            }}
+            name="description"
+            placeholder="Enter task description"
+            value={task.description}
+            onChange={handleChange}
+            rows="5"
+            required
+            className="border rounded p-2 w-full"
           />
         </div>
 
-        <button type="submit" className={styles.button} disabled={loading}>
-          {loading ? "Saving..." : editMode ? "Update Todo" : "Add Todo"}
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-500 text-white p-2 rounded"
+        >
+          {loading
+            ? "Saving..."
+            : editMode
+            ? "Update Task"
+            : "Add Task"}
         </button>
       </form>
     </div>

@@ -1,20 +1,61 @@
-import { Route, Routes } from "react-router-dom";
-import NavBar from "./components/NavBar";
-import AddTask from "./pages/AddTask";
-import ListTodos from "./pages/ListTodos";
-import EditTask from "./pages/EditTask";
+import { Navigate, Route, Routes } from "react-router-dom";
 
-export const App = () => {
+import NavBar from "./components/NavBar.jsx";
+
+import ListTodos from "./pages/ListTodos.jsx";
+import AddTask from "./pages/AddTask.jsx";
+import EditTask from "./pages/EditTask.jsx";
+import Login from "./pages/Login.jsx";
+import Register from "./pages/Register.jsx";
+
+const ProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+const App = () => {
   return (
     <>
-      <nav>
-        <NavBar />
-      </nav>
-      <main>
+      <NavBar />
+
+      <main className="max-w-4xl mx-auto p-4">
         <Routes>
-          <Route path="/" element={<ListTodos />} />
-          <Route path="/add" element={<AddTask />} />
-          <Route path="/edit/:id" element={<EditTask />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <ListTodos />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/add"
+            element={
+              <ProtectedRoute>
+                <AddTask />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/edit/:id"
+            element={
+              <ProtectedRoute>
+                <EditTask />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
     </>

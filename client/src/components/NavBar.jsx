@@ -1,25 +1,59 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const NavBar = () => {
+  const navigate = useNavigate();
+
+  const token = localStorage.getItem("token");
+  const email = localStorage.getItem("email");
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+
+    navigate("/login");
+  };
+
   return (
-    <div className="p-4 text-white bg-orange-500 flex justify-between items-center">
-      <p className="text-xl font-bold flex">MyTodo</p>
-      <div className="flex gap-2">
-        <Link
-          className="inline-flex rounded-xl hover:text-zinc-700 curser-pointer"
-          to="/"
-        >
-          Todo List
+    <nav className="bg-blue-500 text-white p-4">
+      <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <Link to="/" className="text-xl font-bold">
+          Todo App
         </Link>
-        <Link
-          className="inline-flex  rounded-xl hover:text-zinc-700 curser-pointer"
-          to="/add"
-        >
-          Add Todo
-        </Link>
+
+        <div className="flex items-center gap-4">
+          {token ? (
+            <>
+              <Link to="/" className="hover:underline">
+                Tasks
+              </Link>
+
+              <Link to="/add" className="hover:underline">
+                Add Task
+              </Link>
+
+              <span className="text-sm">{email}</span>
+
+              <button
+                onClick={logout}
+                className="bg-red-500 px-3 py-2 rounded"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="hover:underline">
+                Login
+              </Link>
+
+              <Link to="/register" className="hover:underline">
+                Register
+              </Link>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </nav>
   );
 };
 

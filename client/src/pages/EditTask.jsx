@@ -1,59 +1,64 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import AddTaskCard from "../components/AddTaskCard";
+import { useNavigate, useParams } from "react-router-dom";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL;;
+import AddTaskCard from "../components/AddTaskCard.jsx";
+
+import API_URL, { getAuthHeaders } from "../api.js";
 
 const EditTask = () => {
   const { id } = useParams();
-
   const navigate = useNavigate();
 
   const [task, setTask] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchTask = async () => {
       try {
-        const response = await fetch(`${SERVER_URL}/tasks`);
+        const response = await fetch(`${API_URL}/tasks`, {
+          headers: getAuthHeaders(),
+        });
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch tasks");
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("email");
+          navigate("/login");
+          return;
         }
 
         const tasks = await response.json();
 
-        const foundTask = tasks.find((task) => task._id === id);
+        const selectedTask = tasks.find(
+          (item) => item._id === id
+        );
 
-        if (!foundTask) {
+        if (!selectedTask) {
           alert("Task not found");
           navigate("/");
           return;
         }
 
-        setTask(foundTask);
+        setTask(selectedTask);
       } catch (error) {
-        alert(error.message);
-      } finally {
-        setLoading(false);
+        alert("Unable to fetch task");
       }
     };
 
     fetchTask();
   }, [id, navigate]);
 
-  if (loading) {
-    return <p className="text-center mt-10">Loading task...</p>;
-  }
-
   if (!task) {
-    return null;
+    return (
+      <p className="text-center mt-8">
+        Loading task...
+      </p>
+    );
   }
 
   return (
-    <div className="h-screen w-full flex justify-center items-center bg-lime-50">
-      <AddTaskCard editMode={true} initialData={task} />
-    </div>
+    <AddTaskCard
+      editMode={true}
+      initialData={task}
+    />
   );
 };
 

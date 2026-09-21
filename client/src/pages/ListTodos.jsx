@@ -1,93 +1,147 @@
-import React, { useEffect, useState } from "react";
-import TodoItem from "../components/TodoItem";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-const styles = {
-  title: "flex justify-center w-full p-4 text-xl font-bold",
-  todos: "flex flex-col gap-4",
-};
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+import TodoItem from "../components/TodoItem.jsx";
 
-export const ListTodos = () => {
-  const [tasks, setTasks] = useState([]);
+import API_URL, { getAuthHeaders } from "../api.js";
+
+const ListTodos = () => {
   const navigate = useNavigate();
-  const editTodo = (id) => {
-    navigate(`/edit/${id}`);
-  };
-  const fetchTasks = async () => {
+
+  const [todos, setTodos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const fetchTodos = async () => {
     try {
-      const uri = `${SERVER_URL}/tasks`;
-      const response = await fetch(uri, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const response = await fetch(`${API_URL}/tasks`, {
+        headers: getAuthHeaders(),
       });
 
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("email");
+        navigate("/login");
+        return;
+      }
+
       const result = await response.json();
-      setTasks(result);
+
+      if (!response.ok) {
+        alert(result.message);
+        return;
+      }
+
+      setTodos(result);
     } catch (error) {
-      alert("Error fetching tasks:" + error);
+      alert("Unable to fetch tasks");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTasks();
+    fetchTodos();
   }, []);
 
-  const [deletingId, setDeletingId] = useState(null);
-
   const deleteTodo = async (id) => {
-    if (deletingId) {
-      alert("Already deleting a task...");
+    const shouldDelete = window.confirm(
+      "Are you sure you want to delete this task?"
+    );
+
+    if (!shouldDelete) {
       return;
     }
 
     setDeletingId(id);
 
     try {
-      const response = await fetch(`${SERVER_URL}/delete-task`, {
+      const response = await fetch(`${API_URL}/delete-task`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ id }),
       });
 
       const result = await response.json();
 
-      if (response.ok) {
-        setTasks((prevTasks) => prevTasks.filter((task) => task._id !== id));
-      } else {
-        alert("Failed to delete task: " + result.message);
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("email");
+        navigate("/login");
+        return;
       }
+
+      if (!response.ok) {
+        alert(result.message);
+        return;
+      }
+
+      setTodos((previousTodos) =>
+        previousTodos.filter((todo) => todo._id !== id)
+      );
     } catch (error) {
-      alert("Failed to delete the todo");
+      alert("Unable to delete task");
     } finally {
       setDeletingId(null);
     }
   };
 
+  const editTodo = (id) => {
+    navigate(`/edit/${id}`);
+  };
+
+  if (loading) {
+    return (
+      <p className="text-center mt-8">
+        Loading tasks...
+      </p>
+    );
+  }
+
   return (
-    <div className="p-4">
-      <h1 className={styles.title}>To do list</h1>
-      <ul className={styles.todos}>
-        {tasks && tasks.length > 0 ? (
-          tasks.map((task) => (
-            <li key={task._id}>
-              <TodoItem
-                id={task._id}
-                title={task.title}
-                description={task.description}
-                onDelete={deleteTodo}
-                onEdit={editTodo}
-              />
-            </li>
-          ))
-        ) : (
-          <p className="text-center text-gray-500">No tasks found.</p>
-        )}
-      </ul>
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">My Tasks</h1>
+
+          <p className="text-gray-600 mt-2">
+            Manage your personal todo list.
+          </p>
+        </div>
+
+        <button
+          onClick={() => navigate("/add")}
+          className="bg-blue-500 text-white px-4 py-2 rounded"
+        >
+          Add Task
+        </button>
+      </div>
+
+      {todos.length === 0 ? (
+        <div className="bg-white border rounded p-6 text-center">
+          <h2 className="text-xl font-bold mb-2">
+            No tasks yet
+          </h2>
+
+          <p className="text-gray-600">
+            Create your first task to get started.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {todos.map((todo) => (
+            <TodoItem
+              key={todo._id}
+              id={todo._id}
+              title={todo.title}
+              description={todo.description}
+              onDelete={deleteTodo}
+              onEdit={editTodo}
+              deleting={deletingId === todo._id}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

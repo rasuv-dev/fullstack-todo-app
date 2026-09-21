@@ -3,8 +3,6 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 
-import connectDB from "./db/dbconfig.js";
-
 import {
   registerUser,
   loginUser,
@@ -19,11 +17,16 @@ import {
 
 import verifyToken from "./middleware/auth.middleware.js";
 
+import connectDB from "./db/dbconfig.js";
+
 const app = express();
 
 const PORT = process.env.PORT || 3000;
 
+
 app.use(express.json());
+
+
 
 app.use(
   cors({
@@ -31,7 +34,18 @@ app.use(
   })
 );
 
-connectDB();
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    res.status(500).json({
+      message: "Database connection failed",
+    });
+  }
+});
+
+
 
 // Root route
 app.get("/", (req, res) => {
@@ -201,6 +215,4 @@ app.post("/delete-task", verifyToken, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+export default app;
